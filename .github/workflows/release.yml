@@ -1,0 +1,60 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate tag version
+        run: |
+          set -euo pipefail
+          tag_version="${GITHUB_REF_NAME#v}"
+          plugin_version="$(awk -F': ' '/^ \* Version:/ { print $2; exit }' simple-privacy-cookie-policy.php)"
+          if [ "$tag_version" != "$plugin_version" ]; then
+            echo "Tag version $tag_version does not match plugin version $plugin_version"
+            exit 1
+          fi
+      - name: Build WordPress plugin ZIP
+        run: |
+          set -euo pipefail
+          rm -rf build
+          mkdir -p build/simple-privacy-cookie-policy
+          rsync -a ./ build/simple-privacy-cookie-policy/ \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude '.codex-memory' \
+            --exclude '.gitattributes' \
+            --exclude '.gitignore' \
+            --exclude 'build' \
+            --exclude 'dist' \
+            --exclude '.DS_Store' \
+            --exclude '*.zip'
+          cd build
+          zip -r simple-privacy-cookie-policy.zip simple-privacy-cookie-policy
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          notes_file="$(mktemp)"
+          awk "/^## ${GITHUB_REF_NAME#v} /{flag=1; next} /^## /{flag=0} flag" CHANGELOG.md > "$notes_file"
+          if [ ! -s "$notes_file" ]; then
+            printf 'Release %s\n' "$GITHUB_REF_NAME" > "$notes_file"
+          fi
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" build/simple-privacy-cookie-policy.zip --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" build/simple-privacy-cookie-policy.zip --title "WPSimpleCompliance $GITHUB_REF_NAME" --notes-file "$notes_file"
+          fi

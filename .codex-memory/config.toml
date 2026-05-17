@@ -1,0 +1,22 @@
+[vectors]
+enabled = true
+backend = "chroma"
+
+[vectors.embedding]
+provider = "chroma"
+model = "chroma-default"
+dimension = 384
+api_key_env = "OPENAI_API_KEY"
+base_url = "https://api.openai.com/v1"
+
+[vectors.chroma]
+path = ".codex-memory/vectors/chroma"
+collection = "codex_memory"
+
+[vectors.qdrant]
+url = "http://localhost:6333"
+collection = "codex_memory"
+
+[vectors.pgvector]
+database_url_env = "CODEX_MEMORY_DATABASE_URL"
+table = "codex_memory"

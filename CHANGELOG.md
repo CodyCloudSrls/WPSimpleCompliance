@@ -3,7 +3,7 @@
 ## 1.2.0 - 2026-05-17
 
 - Rebranded the public plugin name to WPSimpleCompliance.
-- Added native GitHub Releases update checks for `CodyCloud/WPSimpleCompliance`.
+- Added native GitHub Releases update checks for `CodyCloudSrls/WPSimpleCompliance`.
 - Added release packaging workflow for WordPress-compatible ZIP assets.
 - Invalidates stored consent when the configured consent version changes.
 - Stores a local consent receipt id and consent method in the browser consent cookie.

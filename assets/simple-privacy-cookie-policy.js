@@ -302,6 +302,14 @@
 		});
 	}
 
+	function syncFacebookEmbedsFromStoredConsent() {
+		syncFacebookEmbeds(currentConsent() || allConsent(false));
+	}
+
+	function scheduleFacebookEmbedsSync(delay) {
+		window.setTimeout(syncFacebookEmbedsFromStoredConsent, delay);
+	}
+
 	function activateBlockedScripts(consent) {
 		var nodes = document.querySelectorAll('script[type="text/plain"][data-lde-consent]');
 		nodes.forEach(function (node) {
@@ -333,6 +341,7 @@
 		writeCookie(consent);
 		updateGoogleConsent(consent);
 		activateBlockedScripts(consent);
+		syncFacebookEmbeds(consent);
 		dispatchConsent(consent);
 		syncInputs(root, consent);
 		hideBanner(root);
@@ -390,7 +399,9 @@
 	}
 
 	function openPreferences(root) {
-		syncInputs(root, currentConsent() || allConsent(false));
+		var consent = currentConsent() || allConsent(false);
+		syncInputs(root, consent);
+		syncFacebookEmbeds(consent);
 		openModal(root);
 	}
 
@@ -496,10 +507,13 @@
 			syncInputs(root, existing);
 			updateGoogleConsent(existing);
 			activateBlockedScripts(existing);
+			syncFacebookEmbeds(existing);
 			hideBanner(root);
 		} else {
 			syncFacebookEmbeds(allConsent(false));
 		}
+		scheduleFacebookEmbedsSync(250);
+		scheduleFacebookEmbedsSync(1500);
 
 		root.addEventListener('click', function (event) {
 			var target = event.target.closest('button, a');
@@ -661,12 +675,15 @@
 	window.addEventListener('simplePrivacyCookieConsentChanged', function (event) {
 		syncFacebookEmbeds(event.detail || currentConsent() || allConsent(false));
 	});
+	window.addEventListener('pageshow', syncFacebookEmbedsFromStoredConsent);
 	document.addEventListener('DOMContentLoaded', function () {
 		var root = document.querySelector('[data-lde-cookie-root]');
 		if (root) {
 			initRoot(root);
 		} else {
-			syncFacebookEmbeds(currentConsent() || allConsent(false));
+			syncFacebookEmbedsFromStoredConsent();
+			scheduleFacebookEmbedsSync(250);
+			scheduleFacebookEmbedsSync(1500);
 		}
 		initExternalOpeners();
 		installCompatibilityApi();

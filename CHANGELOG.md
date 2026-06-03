@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.2 - 2026-06-03
+
+- Re-synchronizes Facebook embeds when reopening cookie preferences with an existing marketing consent.
+- Runs an additional post-load Facebook embed sync to recover from cached pages or late consent state hydration.
+- Starts the Facebook embed loading/fallback flow directly after saving consent instead of relying only on blocked-script activation.
+
 ## 1.2.1 - 2026-06-03
 
 - Added consent-aware handling for Facebook Page Plugin embeds.

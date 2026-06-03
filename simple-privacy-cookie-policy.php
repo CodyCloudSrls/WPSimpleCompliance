@@ -3,7 +3,7 @@
  * Plugin Name: WPSimpleCompliance
  * Plugin URI: https://github.com/CodyCloudSrls/WPSimpleCompliance
  * Description: Lightweight EU-oriented cookie consent, visual banner editor, scanner, accessibility statement and multilingual privacy/cookie policy generator.
- * Version: 1.2.1
+ * Version: 1.2.2
  * Author: CodyCloud Srls
  * License: AGPL-3.0
  * Text Domain: simple-privacy-cookie-policy
@@ -17,7 +17,7 @@ if (! defined('ABSPATH')) {
 require_once plugin_dir_path(__FILE__) . 'includes/legal-generator.php';
 
 final class Simple_Privacy_Cookie_Policy {
-	const VERSION = '1.2.1';
+	const VERSION = '1.2.2';
 	const OPTION = 'spcp_settings';
 	const SCAN_OPTION = 'spcp_scan';
 	const VERSION_OPTION = 'spcp_version';

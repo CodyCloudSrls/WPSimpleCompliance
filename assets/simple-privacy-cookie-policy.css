@@ -292,6 +292,10 @@ html.lde-cookie-modal-open {
 	display: none;
 }
 
+.lde-social-embed.is-blocked.has-marketing-consent [data-lde-cookie-open] {
+	display: none;
+}
+
 .lde-social-embed.is-ready .lde-social-embed__content {
 	display: block;
 }

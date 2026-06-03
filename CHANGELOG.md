@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.3 - 2026-06-03
+
+- Clarifies the Facebook fallback when browser tracking protection blocks the SDK after marketing consent.
+- Stops repeated Facebook SDK retry attempts once the browser-blocked state is detected for the page.
+- Hides the cookie preferences action in the blocked Facebook fallback after marketing consent is already active.
+
 ## 1.2.2 - 2026-06-03
 
 - Re-synchronizes Facebook embeds when reopening cookie preferences with an existing marketing consent.

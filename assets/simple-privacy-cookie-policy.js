@@ -246,13 +246,13 @@
 		embed.classList.remove('is-loading', 'is-ready');
 		embed.classList.add('is-blocked', 'has-marketing-consent');
 		embed.setAttribute('data-lde-facebook-state', 'blocked');
-		updateFacebookMessage(embed, 'Il browser sta bloccando il collegamento a Facebook. Puoi aprire la pagina direttamente.');
+		updateFacebookMessage(embed, 'Il consenso marketing risulta attivo, ma il browser sta bloccando il collegamento a Facebook. Puoi aprire la pagina direttamente.');
 	}
 
 	function parseFacebookEmbed(embed) {
 		var state = embed.getAttribute('data-lde-facebook-state');
 		var content = facebookContent(embed);
-		if (!content || state === 'loading' || state === 'ready') {
+		if (!content || state === 'loading' || state === 'ready' || state === 'blocked') {
 			return;
 		}
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.1 - 2026-06-03
+
+- Added consent-aware handling for Facebook Page Plugin embeds.
+- Removed direct Facebook SDK loading from rendered content until marketing consent is granted.
+- Added a visible fallback link when browser privacy controls block Facebook after consent.
+- Updated scan labeling for Facebook SDK embeds as marketing/social third-party content.
+
 ## 1.2.0 - 2026-05-17
 
 - Rebranded the public plugin name to WPSimpleCompliance.

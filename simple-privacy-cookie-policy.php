@@ -3,7 +3,7 @@
  * Plugin Name: WPSimpleCompliance
  * Plugin URI: https://github.com/CodyCloudSrls/WPSimpleCompliance
  * Description: Lightweight EU-oriented cookie consent, visual banner editor, scanner, accessibility statement and multilingual privacy/cookie policy generator.
- * Version: 1.2.0
+ * Version: 1.2.1
  * Author: CodyCloud Srls
  * License: AGPL-3.0
  * Text Domain: simple-privacy-cookie-policy
@@ -17,7 +17,7 @@ if (! defined('ABSPATH')) {
 require_once plugin_dir_path(__FILE__) . 'includes/legal-generator.php';
 
 final class Simple_Privacy_Cookie_Policy {
-	const VERSION = '1.2.0';
+	const VERSION = '1.2.1';
 	const OPTION = 'spcp_settings';
 	const SCAN_OPTION = 'spcp_scan';
 	const VERSION_OPTION = 'spcp_version';
@@ -44,6 +44,7 @@ final class Simple_Privacy_Cookie_Policy {
 		add_action('template_redirect', array(__CLASS__, 'start_iubenda_strip_buffer'), 0);
 		add_action('wp_head', array(__CLASS__, 'print_policy_document_css'), 20);
 		add_filter('template_include', array(__CLASS__, 'maybe_use_policy_document_template'), 99);
+		add_filter('the_content', array(__CLASS__, 'prepare_facebook_embeds'), 30);
 		add_filter('wp_list_pages_excludes', array(__CLASS__, 'exclude_policy_pages_from_page_menus'));
 		add_filter('wp_page_menu_args', array(__CLASS__, 'exclude_policy_pages_from_page_menu_args'));
 		add_filter('wp_nav_menu_objects', array(__CLASS__, 'exclude_policy_pages_from_nav_menu'), 10, 2);
@@ -1305,7 +1306,7 @@ final class Simple_Privacy_Cookie_Policy {
 			'gstatic.com/recaptcha' => array('Google reCAPTCHA static', 'Google', 'Necessari', 'Risorse tecniche per protezione anti-spam.', '_GRECAPTCHA', 'Da servizio Google'),
 			'fonts.googleapis.com' => array('Google Fonts CSS', 'Google', 'Servizio esterno senza cookie HTTP rilevato', 'Caricamento font da CDN Google; valutare localizzazione se richiesta dalla policy.', 'Nessun cookie rilevato dalla scansione HTTP', 'N/A'),
 			'fonts.gstatic.com' => array('Google Fonts file', 'Google', 'Servizio esterno senza cookie HTTP rilevato', 'Download file font da CDN Google.', 'Nessun cookie rilevato dalla scansione HTTP', 'N/A'),
-			'connect.facebook.net' => array('Meta Pixel', 'Meta/Facebook', 'Marketing', 'Misurazione pubblicitaria e remarketing, se configurato.', '_fbp, _fbc', 'Da configurazione Meta'),
+			'connect.facebook.net' => array('Facebook SDK / embed', 'Meta/Facebook', 'Marketing', 'Caricamento di contenuti social incorporati e possibili tracciamenti del fornitore.', '_fbp, _fbc', 'Da configurazione Meta'),
 			'youtube.com/embed' => array('YouTube embed', 'Google/YouTube', 'Marketing/terze parti', 'Riproduzione contenuti video incorporati e possibili tracciamenti del fornitore.', 'Cookie YouTube', 'Da servizio YouTube'),
 			'youtube-nocookie.com' => array('YouTube no-cookie embed', 'Google/YouTube', 'Terze parti minimizzate', 'Riproduzione contenuti video con modalita privacy avanzata.', 'Possibili storage/cookie dopo interazione', 'Da servizio YouTube'),
 			'maps.googleapis.com' => array('Google Maps', 'Google', 'Terze parti', 'Visualizzazione mappe incorporate.', 'Cookie Google Maps', 'Da servizio Google'),
@@ -1424,6 +1425,112 @@ final class Simple_Privacy_Cookie_Policy {
 			'cookiePolicyUrl' => esc_url_raw($settings['cookie_policy_url']),
 			'accessibilityStatementUrl' => esc_url_raw($settings['accessibility_statement_url']),
 			'hasConsent' => ! empty(self::read_consent_cookie()),
+		));
+	}
+
+	public static function prepare_facebook_embeds($content) {
+		if (is_admin() || ! is_string($content) || false === stripos($content, 'fb-page')) {
+			return $content;
+		}
+
+		$content = preg_replace(
+			'#<script\b[^>]*\bsrc=(["\'])https?://connect\.facebook\.net/[^"\']+/sdk\.js[^"\']*\1[^>]*>\s*</script>#is',
+			'',
+			$content
+		);
+		$content = preg_replace(
+			'#<div\b[^>]*\bid=(["\'])fb-root\1[^>]*>\s*</div>#is',
+			'',
+			$content
+		);
+
+		if (false !== stripos($content, 'data-lde-facebook-embed')) {
+			return $content;
+		}
+
+		return preg_replace_callback(
+			'#<div\b(?=[^>]*\bclass\s*=\s*(["\'])[^"\']*\bfb-page\b[^"\']*\1)[^>]*>.*?</div>#is',
+			array(__CLASS__, 'wrap_facebook_embed'),
+			$content
+		);
+	}
+
+	private static function wrap_facebook_embed($matches) {
+		$markup = $matches[0];
+		$href = self::facebook_embed_attribute($markup, 'data-href');
+		if (! $href) {
+			$href = self::facebook_embed_attribute($markup, 'cite');
+		}
+		if (! $href) {
+			$href = self::facebook_link_from_markup($markup);
+		}
+
+		$href = esc_url_raw($href);
+		if (! $href) {
+			return $markup;
+		}
+
+		$title = self::facebook_title_from_markup($markup);
+		$markup = self::sanitize_facebook_embed_markup($markup);
+
+		return sprintf(
+			'<div class="lde-social-embed lde-social-embed--facebook" data-lde-facebook-embed data-lde-facebook-page="%1$s" data-lde-facebook-title="%2$s"><div class="lde-social-embed__placeholder" data-lde-facebook-placeholder><p class="lde-social-embed__kicker">Facebook</p><p class="lde-social-embed__title">%3$s</p><p class="lde-social-embed__message" data-lde-facebook-message>Per visualizzare il contenuto Facebook serve il consenso marketing.</p><div class="lde-social-embed__actions"><button type="button" class="lde-social-embed__button" data-lde-cookie-open>Gestisci consenso</button><a class="lde-social-embed__link" href="%1$s" target="_blank" rel="noopener noreferrer">Apri su Facebook</a></div></div><div class="lde-social-embed__content" data-lde-facebook-content hidden>%4$s</div></div>',
+			esc_url($href),
+			esc_attr($title),
+			esc_html($title),
+			$markup
+		);
+	}
+
+	private static function facebook_embed_attribute($markup, $attribute) {
+		if (preg_match('/\s'. preg_quote($attribute, '/') .'\s*=\s*(["\'])(.*?)\1/is', $markup, $match)) {
+			return html_entity_decode($match[2], ENT_QUOTES, get_bloginfo('charset'));
+		}
+
+		return '';
+	}
+
+	private static function facebook_link_from_markup($markup) {
+		if (preg_match('/<a\b[^>]*\bhref\s*=\s*(["\'])(.*?)\1/is', $markup, $match)) {
+			return html_entity_decode($match[2], ENT_QUOTES, get_bloginfo('charset'));
+		}
+
+		return '';
+	}
+
+	private static function facebook_title_from_markup($markup) {
+		if (preg_match('/<a\b[^>]*>(.*?)<\/a>/is', $markup, $match)) {
+			$title = trim(wp_strip_all_tags($match[1]));
+			if ('' !== $title) {
+				return html_entity_decode($title, ENT_QUOTES, get_bloginfo('charset'));
+			}
+		}
+
+		return 'Pagina Facebook';
+	}
+
+	private static function sanitize_facebook_embed_markup($markup) {
+		return wp_kses($markup, array(
+			'div' => array(
+				'class' => true,
+				'data-href' => true,
+				'data-tabs' => true,
+				'data-width' => true,
+				'data-height' => true,
+				'data-small-header' => true,
+				'data-adapt-container-width' => true,
+				'data-hide-cover' => true,
+				'data-show-facepile' => true,
+			),
+			'blockquote' => array(
+				'cite' => true,
+				'class' => true,
+			),
+			'a' => array(
+				'href' => true,
+				'target' => true,
+				'rel' => true,
+			),
 		));
 	}
 

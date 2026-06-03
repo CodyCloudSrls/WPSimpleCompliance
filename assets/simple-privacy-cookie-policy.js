@@ -5,6 +5,9 @@
 	var cookieName = config.cookieName || 'simple_privacy_cookie_consent';
 	var categories = ['preferences', 'statistics', 'marketing'];
 	var lastFocus = null;
+	var facebookSdkLoading = false;
+	var facebookSdkLoaded = false;
+	var facebookSdkCallbacks = [];
 
 	function consentId() {
 		var source = String(Date.now()) + ':' + Math.random().toString(36).slice(2);
@@ -114,6 +117,191 @@
 		}));
 	}
 
+	function updateFacebookMessage(embed, message) {
+		var node = embed.querySelector('[data-lde-facebook-message]');
+		if (node) {
+			node.textContent = message;
+		}
+	}
+
+	function facebookSdkReady() {
+		return !!(window.FB && window.FB.XFBML && typeof window.FB.XFBML.parse === 'function');
+	}
+
+	function flushFacebookSdk(success) {
+		var callbacks = facebookSdkCallbacks.slice();
+		facebookSdkCallbacks = [];
+		callbacks.forEach(function (callback) {
+			callback(success);
+		});
+	}
+
+	function loadFacebookSdk(callback) {
+		if (facebookSdkReady()) {
+			facebookSdkLoaded = true;
+			callback(true);
+			return;
+		}
+
+		facebookSdkCallbacks.push(callback);
+		if (facebookSdkLoading) {
+			return;
+		}
+
+		facebookSdkLoading = true;
+		var previousFbAsyncInit = window.fbAsyncInit;
+		window.fbAsyncInit = function () {
+			if (typeof previousFbAsyncInit === 'function') {
+				previousFbAsyncInit();
+			}
+			facebookSdkLoaded = true;
+			facebookSdkLoading = false;
+			flushFacebookSdk(true);
+		};
+
+		var script = document.getElementById('facebook-jssdk');
+		var createdScript = false;
+		if (!script) {
+			script = document.createElement('script');
+			script.id = 'facebook-jssdk';
+			script.async = true;
+			script.defer = true;
+			script.crossOrigin = 'anonymous';
+			script.src = 'https://connect.facebook.net/it_IT/sdk.js#xfbml=1&version=v20.0';
+			createdScript = true;
+		}
+
+		script.addEventListener('load', function () {
+			window.setTimeout(function () {
+				if (!facebookSdkReady() || facebookSdkLoaded) {
+					return;
+				}
+				facebookSdkLoaded = true;
+				facebookSdkLoading = false;
+				flushFacebookSdk(true);
+			}, 0);
+		}, {once: true});
+
+		script.addEventListener('error', function () {
+			facebookSdkLoading = false;
+			if (script.parentNode) {
+				script.parentNode.removeChild(script);
+			}
+			flushFacebookSdk(false);
+		}, {once: true});
+
+		if (createdScript) {
+			document.body.appendChild(script);
+		}
+
+		window.setTimeout(function () {
+			if (facebookSdkLoaded || facebookSdkReady()) {
+				return;
+			}
+			facebookSdkLoading = false;
+			if (script.parentNode) {
+				script.parentNode.removeChild(script);
+			}
+			flushFacebookSdk(false);
+		}, 7000);
+	}
+
+	function facebookContent(embed) {
+		var content = embed.querySelector('[data-lde-facebook-content]');
+		if (content && !content.getAttribute('data-lde-original-html')) {
+			content.setAttribute('data-lde-original-html', content.innerHTML);
+		}
+		return content;
+	}
+
+	function restoreFacebookContent(embed) {
+		var content = facebookContent(embed);
+		if (!content) {
+			return null;
+		}
+		var original = content.getAttribute('data-lde-original-html');
+		if (original) {
+			content.innerHTML = original;
+		}
+		content.hidden = true;
+		return content;
+	}
+
+	function hasFacebookFrame(embed) {
+		return !!embed.querySelector('.fb_iframe_widget iframe, iframe[src*="facebook.com"], iframe[src*="fbcdn.net"]');
+	}
+
+	function markFacebookReady(embed) {
+		var content = facebookContent(embed);
+		if (content) {
+			content.hidden = false;
+		}
+		embed.classList.remove('is-loading', 'is-blocked');
+		embed.classList.add('is-ready', 'has-marketing-consent');
+		embed.setAttribute('data-lde-facebook-state', 'ready');
+	}
+
+	function markFacebookBlocked(embed) {
+		restoreFacebookContent(embed);
+		embed.classList.remove('is-loading', 'is-ready');
+		embed.classList.add('is-blocked', 'has-marketing-consent');
+		embed.setAttribute('data-lde-facebook-state', 'blocked');
+		updateFacebookMessage(embed, 'Il browser sta bloccando il collegamento a Facebook. Puoi aprire la pagina direttamente.');
+	}
+
+	function parseFacebookEmbed(embed) {
+		var state = embed.getAttribute('data-lde-facebook-state');
+		var content = facebookContent(embed);
+		if (!content || state === 'loading' || state === 'ready') {
+			return;
+		}
+
+		restoreFacebookContent(embed);
+		content = facebookContent(embed);
+		content.hidden = false;
+		embed.classList.remove('is-blocked', 'is-ready');
+		embed.classList.add('is-loading', 'has-marketing-consent');
+		embed.setAttribute('data-lde-facebook-state', 'loading');
+		updateFacebookMessage(embed, 'Caricamento del contenuto Facebook in corso...');
+
+		loadFacebookSdk(function (success) {
+			if (!success) {
+				markFacebookBlocked(embed);
+				return;
+			}
+
+			try {
+				window.FB.XFBML.parse(content);
+			} catch (e) {
+				markFacebookBlocked(embed);
+				return;
+			}
+
+			window.setTimeout(function () {
+				if (hasFacebookFrame(embed)) {
+					markFacebookReady(embed);
+				} else {
+					markFacebookBlocked(embed);
+				}
+			}, 3500);
+		});
+	}
+
+	function syncFacebookEmbeds(consent) {
+		var embeds = document.querySelectorAll('[data-lde-facebook-embed]');
+		embeds.forEach(function (embed) {
+			if (consent && consent.marketing) {
+				parseFacebookEmbed(embed);
+				return;
+			}
+
+			restoreFacebookContent(embed);
+			embed.classList.remove('has-marketing-consent', 'is-loading', 'is-ready', 'is-blocked');
+			embed.setAttribute('data-lde-facebook-state', 'idle');
+			updateFacebookMessage(embed, 'Per visualizzare il contenuto Facebook serve il consenso marketing.');
+		});
+	}
+
 	function activateBlockedScripts(consent) {
 		var nodes = document.querySelectorAll('script[type="text/plain"][data-lde-consent]');
 		nodes.forEach(function (node) {
@@ -138,6 +326,7 @@
 			node.setAttribute('data-lde-loaded', '1');
 			node.parentNode.insertBefore(script, node.nextSibling);
 		});
+		syncFacebookEmbeds(consent);
 	}
 
 	function saveConsent(root, consent) {
@@ -308,6 +497,8 @@
 			updateGoogleConsent(existing);
 			activateBlockedScripts(existing);
 			hideBanner(root);
+		} else {
+			syncFacebookEmbeds(allConsent(false));
 		}
 
 		root.addEventListener('click', function (event) {
@@ -467,10 +658,15 @@
 	}
 
 	installCompatibilityApi();
+	window.addEventListener('simplePrivacyCookieConsentChanged', function (event) {
+		syncFacebookEmbeds(event.detail || currentConsent() || allConsent(false));
+	});
 	document.addEventListener('DOMContentLoaded', function () {
 		var root = document.querySelector('[data-lde-cookie-root]');
 		if (root) {
 			initRoot(root);
+		} else {
+			syncFacebookEmbeds(currentConsent() || allConsent(false));
 		}
 		initExternalOpeners();
 		installCompatibilityApi();

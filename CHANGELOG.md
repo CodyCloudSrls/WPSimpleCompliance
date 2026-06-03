@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.4 - 2026-06-03
+
+- Registers the native WordPress `Update URI` source hook for GitHub-hosted plugin updates.
+- Adds the `version` field expected by WordPress source-specific update responses while preserving the GitHub release package URL.
+
 ## 1.2.3 - 2026-06-03
 
 - Clarifies the Facebook fallback when browser tracking protection blocks the SDK after marketing consent.

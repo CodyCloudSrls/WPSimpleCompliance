@@ -3,7 +3,7 @@
  * Plugin Name: WPSimpleCompliance
  * Plugin URI: https://github.com/CodyCloudSrls/WPSimpleCompliance
  * Description: Lightweight EU-oriented cookie consent, visual banner editor, scanner, accessibility statement and multilingual privacy/cookie policy generator.
- * Version: 1.2.3
+ * Version: 1.2.4
  * Author: CodyCloud Srls
  * License: AGPL-3.0
  * Text Domain: simple-privacy-cookie-policy
@@ -17,7 +17,7 @@ if (! defined('ABSPATH')) {
 require_once plugin_dir_path(__FILE__) . 'includes/legal-generator.php';
 
 final class Simple_Privacy_Cookie_Policy {
-	const VERSION = '1.2.3';
+	const VERSION = '1.2.4';
 	const OPTION = 'spcp_settings';
 	const SCAN_OPTION = 'spcp_scan';
 	const VERSION_OPTION = 'spcp_version';
@@ -25,6 +25,7 @@ final class Simple_Privacy_Cookie_Policy {
 	const UPDATE_TRANSIENT = 'spcp_github_release';
 	const UPDATE_CACHE_TTL = 6 * HOUR_IN_SECONDS;
 	const UPDATE_REPOSITORY = 'CodyCloudSrls/WPSimpleCompliance';
+	const UPDATE_URI = 'https://github.com/CodyCloudSrls/WPSimpleCompliance';
 	const SCAN_HOOK = 'spcp_scheduled_scan';
 	const COOKIE = 'simple_privacy_cookie_consent';
 	const MANAGED_PAGE_META = '_spcp_managed_page';
@@ -49,6 +50,7 @@ final class Simple_Privacy_Cookie_Policy {
 		add_filter('wp_page_menu_args', array(__CLASS__, 'exclude_policy_pages_from_page_menu_args'));
 		add_filter('wp_nav_menu_objects', array(__CLASS__, 'exclude_policy_pages_from_nav_menu'), 10, 2);
 		add_filter('pre_set_site_transient_update_plugins', array(__CLASS__, 'check_github_update'));
+		add_filter('update_plugins_github.com', array(__CLASS__, 'check_github_update_uri'), 10, 4);
 		add_filter('plugins_api', array(__CLASS__, 'github_plugin_information'), 20, 3);
 
 		add_shortcode('simple_cookie_settings', array(__CLASS__, 'settings_shortcode'));
@@ -317,6 +319,19 @@ final class Simple_Privacy_Cookie_Policy {
 		return $transient;
 	}
 
+	public static function check_github_update_uri($update, $plugin_data, $plugin_file, $locales) {
+		if (self::plugin_file() !== $plugin_file || empty($plugin_data['UpdateURI']) || self::UPDATE_URI !== untrailingslashit((string) $plugin_data['UpdateURI'])) {
+			return $update;
+		}
+
+		$release = self::github_release();
+		if (! $release) {
+			return $update;
+		}
+
+		return self::github_update_payload($release);
+	}
+
 	public static function github_plugin_information($result, $action, $args) {
 		if ('plugin_information' !== $action || empty($args->slug) || self::plugin_slug() !== $args->slug) {
 			return $result;
@@ -356,9 +371,10 @@ final class Simple_Privacy_Cookie_Policy {
 
 	private static function github_update_payload($release) {
 		return (object) array(
-			'id' => 'github.com/'. self::UPDATE_REPOSITORY,
+			'id' => self::UPDATE_URI,
 			'slug' => self::plugin_slug(),
 			'plugin' => self::plugin_file(),
+			'version' => $release['version'],
 			'new_version' => $release['version'],
 			'url' => $release['html_url'],
 			'package' => $release['package'],

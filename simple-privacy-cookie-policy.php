@@ -3,7 +3,7 @@
  * Plugin Name: WPSimpleCompliance
  * Plugin URI: https://github.com/CodyCloudSrls/WPSimpleCompliance
  * Description: Lightweight EU-oriented cookie consent, visual banner editor, scanner, accessibility statement and multilingual privacy/cookie policy generator.
- * Version: 1.2.4
+ * Version: 1.2.5
  * Author: CodyCloud Srls
  * License: AGPL-3.0
  * Text Domain: simple-privacy-cookie-policy
@@ -17,7 +17,7 @@ if (! defined('ABSPATH')) {
 require_once plugin_dir_path(__FILE__) . 'includes/legal-generator.php';
 
 final class Simple_Privacy_Cookie_Policy {
-	const VERSION = '1.2.4';
+	const VERSION = '1.2.5';
 	const OPTION = 'spcp_settings';
 	const SCAN_OPTION = 'spcp_scan';
 	const VERSION_OPTION = 'spcp_version';
@@ -1445,9 +1445,11 @@ final class Simple_Privacy_Cookie_Policy {
 	}
 
 	public static function prepare_facebook_embeds($content) {
-		if (is_admin() || ! is_string($content) || false === stripos($content, 'fb-page')) {
+		if (is_admin() || ! is_string($content) || ! self::content_has_facebook_embed($content)) {
 			return $content;
 		}
+
+		$had_wrapped_embeds = false !== stripos($content, 'data-lde-facebook-embed');
 
 		$content = preg_replace(
 			'#<script\b[^>]*\bsrc=(["\'])https?://connect\.facebook\.net/[^"\']+/sdk\.js[^"\']*\1[^>]*>\s*</script>#is',
@@ -1460,7 +1462,13 @@ final class Simple_Privacy_Cookie_Policy {
 			$content
 		);
 
-		if (false !== stripos($content, 'data-lde-facebook-embed')) {
+		$content = preg_replace_callback(
+			'#<iframe\b(?=[^>]*\bsrc\s*=\s*(["\'])https?://(?:www\.)?facebook\.com/plugins/video\.php[^"\']*\1)[^>]*>\s*</iframe>#is',
+			array(__CLASS__, 'wrap_facebook_video_embed'),
+			$content
+		);
+
+		if ($had_wrapped_embeds || false === stripos($content, 'fb-page')) {
 			return $content;
 		}
 
@@ -1469,6 +1477,12 @@ final class Simple_Privacy_Cookie_Policy {
 			array(__CLASS__, 'wrap_facebook_embed'),
 			$content
 		);
+	}
+
+	private static function content_has_facebook_embed($content) {
+		return false !== stripos($content, 'fb-page')
+			|| false !== stripos($content, 'connect.facebook.net')
+			|| false !== stripos($content, 'facebook.com/plugins/video.php');
 	}
 
 	private static function wrap_facebook_embed($matches) {
@@ -1489,6 +1503,45 @@ final class Simple_Privacy_Cookie_Policy {
 		$title = self::facebook_title_from_markup($markup);
 		$markup = self::sanitize_facebook_embed_markup($markup);
 
+		return self::facebook_embed_wrapper($href, $title, $markup);
+	}
+
+	private static function wrap_facebook_video_embed($matches) {
+		$iframe = $matches[0];
+		$src = self::facebook_embed_attribute($iframe, 'src');
+		$src = esc_url_raw($src);
+		if (! $src) {
+			return $iframe;
+		}
+
+		$parts = wp_parse_url($src);
+		$query = array();
+		if (! empty($parts['query'])) {
+			wp_parse_str($parts['query'], $query);
+		}
+
+		$query_href = $query['href'] ?? '';
+		$href = esc_url_raw(is_scalar($query_href) && '' !== (string) $query_href ? (string) $query_href : $src);
+		if (! $href) {
+			return $iframe;
+		}
+
+		$width = self::facebook_embed_dimension($query['width'] ?? self::facebook_embed_attribute($iframe, 'width'), 560);
+		$query_show_text = $query['show_text'] ?? '';
+		$show_text = is_scalar($query_show_text) && '' !== (string) $query_show_text && 'false' !== strtolower((string) $query_show_text) ? 'true' : 'false';
+		$title = 'Video Facebook';
+		$markup = sprintf(
+			'<div class="fb-video" data-href="%1$s" data-width="%2$d" data-show-text="%3$s" data-allowfullscreen="true"><blockquote cite="%1$s" class="fb-xfbml-parse-ignore"><a href="%1$s" target="_blank" rel="noopener noreferrer">%4$s</a></blockquote></div>',
+			esc_url($href),
+			$width,
+			esc_attr($show_text),
+			esc_html($title)
+		);
+
+		return self::facebook_embed_wrapper($href, $title, self::sanitize_facebook_embed_markup($markup));
+	}
+
+	private static function facebook_embed_wrapper($href, $title, $markup) {
 		return sprintf(
 			'<div class="lde-social-embed lde-social-embed--facebook" data-lde-facebook-embed data-lde-facebook-page="%1$s" data-lde-facebook-title="%2$s"><div class="lde-social-embed__placeholder" data-lde-facebook-placeholder><p class="lde-social-embed__kicker">Facebook</p><p class="lde-social-embed__title">%3$s</p><p class="lde-social-embed__message" data-lde-facebook-message>Per visualizzare il contenuto Facebook serve il consenso marketing.</p><div class="lde-social-embed__actions"><button type="button" class="lde-social-embed__button" data-lde-cookie-open>Gestisci consenso</button><a class="lde-social-embed__link" href="%1$s" target="_blank" rel="noopener noreferrer">Apri su Facebook</a></div></div><div class="lde-social-embed__content" data-lde-facebook-content hidden>%4$s</div></div>',
 			esc_url($href),
@@ -1496,6 +1549,19 @@ final class Simple_Privacy_Cookie_Policy {
 			esc_html($title),
 			$markup
 		);
+	}
+
+	private static function facebook_embed_dimension($value, $fallback) {
+		if (! is_scalar($value)) {
+			$value = $fallback;
+		}
+
+		$dimension = absint($value);
+		if ($dimension < 1) {
+			return absint($fallback);
+		}
+
+		return min($dimension, 1200);
 	}
 
 	private static function facebook_embed_attribute($markup, $attribute) {
@@ -1537,6 +1603,8 @@ final class Simple_Privacy_Cookie_Policy {
 				'data-adapt-container-width' => true,
 				'data-hide-cover' => true,
 				'data-show-facepile' => true,
+				'data-show-text' => true,
+				'data-allowfullscreen' => true,
 			),
 			'blockquote' => array(
 				'cite' => true,

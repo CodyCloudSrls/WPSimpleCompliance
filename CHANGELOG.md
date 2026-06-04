@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.5 - 2026-06-04
+
+- Wraps Facebook video plugin iframes in the same consent-aware Facebook embed flow used for page embeds.
+- Prevents direct Facebook video iframe loading before marketing consent and preserves the browser-blocked fallback when tracking protection blocks the SDK.
+
 ## 1.2.4 - 2026-06-03
 
 - Registers the native WordPress `Update URI` source hook for GitHub-hosted plugin updates.

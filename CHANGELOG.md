@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.6 - 2026-06-04
+
+- Expands the generated cookie policy with the full controller contact block instead of only the controller name.
+- Adds an explicit privacy policy link from the generated cookie policy to the complete GDPR Article 13 notice.
+- Warns administrators when core controller identity or contact fields are missing from the legal settings.
+
 ## 1.2.5 - 2026-06-04
 
 - Wraps Facebook video plugin iframes in the same consent-aware Facebook embed flow used for page embeds.

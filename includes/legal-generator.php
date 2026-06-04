@@ -408,17 +408,19 @@ final class SPCP_Legal_Generator {
 					<?php if ('it' === $lang) : ?>
 						<p>Questo sito usa cookie tecnici necessari al funzionamento, alla sicurezza e alla memorizzazione delle preferenze di consenso.</p>
 						<p>Cookie e strumenti analoghi per preferenze, statistiche e marketing sono attivati solo dopo consenso, ove configurati.</p>
+						<?php self::privacy_policy_reference($settings, 'it'); ?>
 						<?php self::scan_note($scan, 'it'); ?>
 						<?php echo self::cookie_tables($cookies, $services, 'it'); ?>
 						<?php if ($include_settings_link) : ?><p>Puoi modificare le preferenze qui: <?php echo $settings_link; ?></p><?php endif; ?>
-						<p>Titolare: <?php echo esc_html($settings['controller_legal_name'] ?: $settings['controller_name']); ?>.</p>
+						<?php echo self::controller_block($settings, 'it'); ?>
 					<?php else : ?>
 						<p>This website uses technical cookies required for operation, security and storage of consent preferences.</p>
 						<p>Preference, analytics and marketing cookies or similar technologies are enabled only after consent, where configured.</p>
+						<?php self::privacy_policy_reference($settings, 'en'); ?>
 						<?php self::scan_note($scan, 'en'); ?>
 						<?php echo self::cookie_tables($cookies, $services, 'en'); ?>
 						<?php if ($include_settings_link) : ?><p>You can change your preferences here: <?php echo $settings_link; ?></p><?php endif; ?>
-						<p>Controller: <?php echo esc_html($settings['controller_legal_name'] ?: $settings['controller_name']); ?>.</p>
+						<?php echo self::controller_block($settings, 'en'); ?>
 					<?php endif; ?>
 				</article>
 			<?php endforeach; ?>
@@ -440,19 +442,37 @@ final class SPCP_Legal_Generator {
 		echo '</p>';
 	}
 
+	private static function privacy_policy_reference($settings, $lang) {
+		$url = self::privacy_public_url($settings);
+		if (! $url) {
+			return;
+		}
+
+		$text = 'en' === $lang
+			? 'For the complete information notice under the GDPR, including data subject rights, recipients, retention and transfers, see'
+			: 'Per l\'informativa completa ai sensi del GDPR, inclusi diritti dell\'interessato, destinatari, conservazione e trasferimenti, consulta';
+
+		printf(
+			'<p>%1$s <a href="%2$s">%3$s</a>.</p>',
+			esc_html($text),
+			esc_url($url),
+			'Privacy policy'
+		);
+	}
+
 	private static function controller_block($settings, $lang) {
 		$title = 'it' === $lang ? 'Titolare del trattamento' : 'Data controller';
 		$name = $settings['controller_legal_name'] ?: $settings['controller_name'];
 		$parts = array_filter(array(
 			$name,
 			$settings['controller_address'] ?? '',
-			! empty($settings['controller_tax_id']) ? 'CF: '. $settings['controller_tax_id'] : '',
-			! empty($settings['controller_vat']) ? 'VAT/P.IVA: '. $settings['controller_vat'] : '',
+			! empty($settings['controller_tax_id']) ? ('it' === $lang ? 'CF: ' : 'Tax ID: ') . $settings['controller_tax_id'] : '',
+			! empty($settings['controller_vat']) ? ('it' === $lang ? 'P.IVA: ' : 'VAT no.: ') . $settings['controller_vat'] : '',
 			! empty($settings['controller_email']) ? 'Email: '. $settings['controller_email'] : '',
 			! empty($settings['controller_pec']) ? 'PEC: '. $settings['controller_pec'] : '',
 			! empty($settings['controller_phone']) ? 'Tel: '. $settings['controller_phone'] : '',
 			! empty($settings['privacy_contact_email']) ? ('it' === $lang ? 'Contatto privacy: ' : 'Privacy contact: ') . $settings['privacy_contact_email'] : '',
-			! empty($settings['dpo_email']) ? 'DPO/RPD: '. trim(($settings['dpo_name'] ?? '') .' '. $settings['dpo_email']) : '',
+			! empty($settings['dpo_email']) ? ('it' === $lang ? 'RPD/DPO: ' : 'DPO: ') . trim(($settings['dpo_name'] ?? '') .' '. $settings['dpo_email']) : '',
 			! empty($settings['eu_representative']) ? ('it' === $lang ? 'Rappresentante UE: ' : 'EU representative: ') . $settings['eu_representative'] : '',
 		));
 

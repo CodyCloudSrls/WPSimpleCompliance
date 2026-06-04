@@ -3,7 +3,7 @@
  * Plugin Name: WPSimpleCompliance
  * Plugin URI: https://github.com/CodyCloudSrls/WPSimpleCompliance
  * Description: Lightweight EU-oriented cookie consent, visual banner editor, scanner, accessibility statement and multilingual privacy/cookie policy generator.
- * Version: 1.2.5
+ * Version: 1.2.6
  * Author: CodyCloud Srls
  * License: AGPL-3.0
  * Text Domain: simple-privacy-cookie-policy
@@ -17,7 +17,7 @@ if (! defined('ABSPATH')) {
 require_once plugin_dir_path(__FILE__) . 'includes/legal-generator.php';
 
 final class Simple_Privacy_Cookie_Policy {
-	const VERSION = '1.2.5';
+	const VERSION = '1.2.6';
 	const OPTION = 'spcp_settings';
 	const SCAN_OPTION = 'spcp_scan';
 	const VERSION_OPTION = 'spcp_version';
@@ -34,6 +34,7 @@ final class Simple_Privacy_Cookie_Policy {
 		add_action('init', array(__CLASS__, 'maybe_upgrade'), 20);
 		add_action('admin_init', array(__CLASS__, 'register_settings'));
 		add_action('admin_menu', array(__CLASS__, 'add_settings_page'));
+		add_action('admin_notices', array(__CLASS__, 'render_legal_settings_notice'));
 		add_action('admin_enqueue_scripts', array(__CLASS__, 'enqueue_admin_assets'));
 		add_action('admin_post_spcp_scan', array(__CLASS__, 'handle_scan_request'));
 		add_action(self::SCAN_HOOK, array(__CLASS__, 'run_cookie_scan'));
@@ -236,6 +237,47 @@ final class Simple_Privacy_Cookie_Policy {
 			'simple-privacy-cookie-policy',
 			array(__CLASS__, 'render_settings_page')
 		);
+	}
+
+	public static function render_legal_settings_notice() {
+		if (! current_user_can('manage_options')) {
+			return;
+		}
+
+		$screen = function_exists('get_current_screen') ? get_current_screen() : null;
+		if (! $screen || ! in_array($screen->id, array('settings_page_simple-privacy-cookie-policy', 'plugins'), true)) {
+			return;
+		}
+
+		$missing = self::missing_legal_settings();
+		if (! $missing) {
+			return;
+		}
+
+		$url = admin_url('options-general.php?page=simple-privacy-cookie-policy');
+		?>
+		<div class="notice notice-warning">
+			<p><strong>WPSimpleCompliance:</strong> completa i dati legali del titolare per rendere privacy policy e cookie policy piu coerenti con gli obblighi informativi GDPR.</p>
+			<p>Dati mancanti o da verificare: <?php echo esc_html(implode(', ', $missing)); ?>. <a href="<?php echo esc_url($url); ?>">Apri impostazioni privacy</a></p>
+		</div>
+		<?php
+	}
+
+	private static function missing_legal_settings() {
+		$settings = self::settings();
+		$missing = array();
+
+		if (empty($settings['controller_legal_name']) && empty($settings['controller_name'])) {
+			$missing[] = 'denominazione titolare';
+		}
+		if (empty($settings['controller_address'])) {
+			$missing[] = 'sede/indirizzo titolare';
+		}
+		if (empty($settings['controller_email']) && empty($settings['controller_pec']) && empty($settings['privacy_contact_email'])) {
+			$missing[] = 'contatto privacy o contatto titolare';
+		}
+
+		return $missing;
 	}
 
 	public static function enqueue_admin_assets($hook) {

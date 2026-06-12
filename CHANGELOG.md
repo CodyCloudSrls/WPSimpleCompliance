@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.0 - 2026-06-12
+
+- Fixes the consent banner staying hidden behind full-page caches (LiteSpeed, Cloudflare, Varnish): the banner is now always rendered hidden server-side and the JavaScript re-asserts visibility from the consent cookie, so visitors without a valid consent always see the banner regardless of the cached HTML.
+- Falls back to a `dataLayer` push when `gtag` is not yet defined, so a consent change is never silently dropped while Google Tag loads deferred/delayed.
+- Hardens the Iubenda strip output buffer against PCRE backtrack limits on large pages: it can no longer blank the page when a regex replacement fails.
+- Guarantees the legal document generator always runs with a full settings array, removing possible PHP 8.1 "undefined array key" warnings.
+- Restricts the Escape key to closing the cookie preferences modal only when it is actually open.
+- BREAKING (CSS only): renames the front-end CSS class and `data-*` attribute prefix from `lde-` to `spcp-` for a vendor-neutral, white-label build. The plugin ships its own inline CSS so the default appearance is unchanged; only custom site CSS that targeted `.lde-*` selectors needs to be updated to `.spcp-*`.
+
 ## 1.2.6 - 2026-06-04
 
 - Expands the generated cookie policy with the full controller contact block instead of only the controller name.

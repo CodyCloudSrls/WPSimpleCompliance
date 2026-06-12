@@ -3,7 +3,7 @@
  * Plugin Name: WPSimpleCompliance
  * Plugin URI: https://github.com/CodyCloudSrls/WPSimpleCompliance
  * Description: Lightweight EU-oriented cookie consent, visual banner editor, scanner, accessibility statement and multilingual privacy/cookie policy generator.
- * Version: 1.2.6
+ * Version: 1.3.0
  * Author: CodyCloud Srls
  * License: AGPL-3.0
  * Text Domain: simple-privacy-cookie-policy
@@ -17,7 +17,7 @@ if (! defined('ABSPATH')) {
 require_once plugin_dir_path(__FILE__) . 'includes/legal-generator.php';
 
 final class Simple_Privacy_Cookie_Policy {
-	const VERSION = '1.2.6';
+	const VERSION = '1.3.0';
 	const OPTION = 'spcp_settings';
 	const SCAN_OPTION = 'spcp_scan';
 	const VERSION_OPTION = 'spcp_version';
@@ -1491,7 +1491,7 @@ final class Simple_Privacy_Cookie_Policy {
 			return $content;
 		}
 
-		$had_wrapped_embeds = false !== stripos($content, 'data-lde-facebook-embed');
+		$had_wrapped_embeds = false !== stripos($content, 'data-spcp-facebook-embed');
 
 		$content = preg_replace(
 			'#<script\b[^>]*\bsrc=(["\'])https?://connect\.facebook\.net/[^"\']+/sdk\.js[^"\']*\1[^>]*>\s*</script>#is',
@@ -1585,7 +1585,7 @@ final class Simple_Privacy_Cookie_Policy {
 
 	private static function facebook_embed_wrapper($href, $title, $markup) {
 		return sprintf(
-			'<div class="lde-social-embed lde-social-embed--facebook" data-lde-facebook-embed data-lde-facebook-page="%1$s" data-lde-facebook-title="%2$s"><div class="lde-social-embed__placeholder" data-lde-facebook-placeholder><p class="lde-social-embed__kicker">Facebook</p><p class="lde-social-embed__title">%3$s</p><p class="lde-social-embed__message" data-lde-facebook-message>Per visualizzare il contenuto Facebook serve il consenso marketing.</p><div class="lde-social-embed__actions"><button type="button" class="lde-social-embed__button" data-lde-cookie-open>Gestisci consenso</button><a class="lde-social-embed__link" href="%1$s" target="_blank" rel="noopener noreferrer">Apri su Facebook</a></div></div><div class="lde-social-embed__content" data-lde-facebook-content hidden>%4$s</div></div>',
+			'<div class="spcp-social-embed spcp-social-embed--facebook" data-spcp-facebook-embed data-spcp-facebook-page="%1$s" data-spcp-facebook-title="%2$s"><div class="spcp-social-embed__placeholder" data-spcp-facebook-placeholder><p class="spcp-social-embed__kicker">Facebook</p><p class="spcp-social-embed__title">%3$s</p><p class="spcp-social-embed__message" data-spcp-facebook-message>Per visualizzare il contenuto Facebook serve il consenso marketing.</p><div class="spcp-social-embed__actions"><button type="button" class="spcp-social-embed__button" data-spcp-cookie-open>Gestisci consenso</button><a class="spcp-social-embed__link" href="%1$s" target="_blank" rel="noopener noreferrer">Apri su Facebook</a></div></div><div class="spcp-social-embed__content" data-spcp-facebook-content hidden>%4$s</div></div>',
 			esc_url($href),
 			esc_attr($title),
 			esc_html($title),
@@ -1671,7 +1671,7 @@ final class Simple_Privacy_Cookie_Policy {
 		}
 
 		?>
-		<div class="lde-accessibility-footer-link">
+		<div class="spcp-accessibility-footer-link">
 			<?php self::render_document_link($settings['accessibility_statement_url'], 'Dichiarazione di accessibilita', 'accessibility', self::should_open_document_popup($settings['accessibility_statement_url'])); ?>
 		</div>
 		<?php
@@ -1705,115 +1705,114 @@ final class Simple_Privacy_Cookie_Policy {
 		$privacy_popup = 'external' === ($settings['privacy_policy_mode'] ?? 'generated') ? false : self::should_open_document_popup($privacy_url);
 		$cookie_popup = self::should_open_document_popup($settings['cookie_policy_url'] ?? '');
 		$accessibility_popup = self::should_open_document_popup($settings['accessibility_statement_url'] ?? '');
-		$has_consent = ! empty(self::read_consent_cookie());
 		$template = sanitize_key($settings['visual_template'] ?? 'glass');
 		if (! isset(self::visual_templates()[$template])) {
 			$template = 'glass';
 		}
 		self::print_inline_css();
 		?>
-		<div id="cmplz-manage-consent-container" class="lde-cookie lde-cookie--<?php echo esc_attr($template); ?>" data-lde-cookie-root style="<?php echo esc_attr(self::visual_style_attribute($settings)); ?>">
-			<div class="lde-cookie__banner" role="region" aria-label="Preferenze privacy e cookie" aria-live="polite" <?php echo $has_consent ? 'hidden' : ''; ?>>
-				<button type="button" class="lde-cookie__banner-close" data-lde-cookie-reject aria-label="Chiudi banner e mantieni solo i cookie necessari">x</button>
-				<div class="lde-cookie__content">
-					<p class="lde-cookie__title">Privacy e cookie</p>
+		<div id="cmplz-manage-consent-container" class="spcp-cookie spcp-cookie--<?php echo esc_attr($template); ?>" data-spcp-cookie-root style="<?php echo esc_attr(self::visual_style_attribute($settings)); ?>">
+			<div class="spcp-cookie__banner" role="region" aria-label="Preferenze privacy e cookie" aria-live="polite" hidden>
+				<button type="button" class="spcp-cookie__banner-close" data-spcp-cookie-reject aria-label="Chiudi banner e mantieni solo i cookie necessari">x</button>
+				<div class="spcp-cookie__content">
+					<p class="spcp-cookie__title">Privacy e cookie</p>
 					<p>Usiamo cookie tecnici necessari. Con il tuo consenso possiamo usare anche preferenze, statistiche e marketing. Puoi accettare, rifiutare o scegliere per finalita.</p>
-					<p class="lde-cookie__links">
+					<p class="spcp-cookie__links">
 						<?php self::render_document_link($privacy_url, 'Privacy policy', 'privacy', $privacy_popup); ?>
 						<?php self::render_document_link($settings['cookie_policy_url'], 'Cookie policy', 'cookie-policy', $cookie_popup); ?>
 						<?php self::render_document_link($settings['accessibility_statement_url'], 'Accessibilita', 'accessibility', $accessibility_popup); ?>
 					</p>
 				</div>
-				<div class="lde-cookie__actions">
-					<button type="button" class="lde-cookie__button lde-cookie__button--ghost" data-lde-cookie-reject>Rifiuta non essenziali</button>
-					<button type="button" class="lde-cookie__button lde-cookie__button--ghost" data-lde-cookie-open>Personalizza</button>
-					<button type="button" class="lde-cookie__button" data-lde-cookie-accept>Accetta tutto</button>
+				<div class="spcp-cookie__actions">
+					<button type="button" class="spcp-cookie__button spcp-cookie__button--ghost" data-spcp-cookie-reject>Rifiuta non essenziali</button>
+					<button type="button" class="spcp-cookie__button spcp-cookie__button--ghost" data-spcp-cookie-open>Personalizza</button>
+					<button type="button" class="spcp-cookie__button" data-spcp-cookie-accept>Accetta tutto</button>
 				</div>
 			</div>
 
-			<button type="button" class="lde-cookie__reopen cc-cookie-link" data-lde-cookie-open data-cc-open-consent aria-label="Gestisci preferenze cookie">Preferenze cookie</button>
+			<button type="button" class="spcp-cookie__reopen cc-cookie-link" data-spcp-cookie-open data-cc-open-consent aria-label="Gestisci preferenze cookie">Preferenze cookie</button>
 
-			<div class="lde-cookie__modal" data-lde-cookie-modal hidden>
-				<div class="lde-cookie__backdrop" data-lde-cookie-close></div>
-				<div class="lde-cookie__dialog" role="dialog" aria-modal="true" aria-labelledby="lde-cookie-title" aria-describedby="lde-cookie-description" tabindex="-1">
-					<div class="lde-cookie__dialog-head">
-						<h2 id="lde-cookie-title">Preferenze cookie</h2>
-						<button type="button" class="lde-cookie__close" data-lde-cookie-close aria-label="Chiudi preferenze cookie">x</button>
+			<div class="spcp-cookie__modal" data-spcp-cookie-modal hidden>
+				<div class="spcp-cookie__backdrop" data-spcp-cookie-close></div>
+				<div class="spcp-cookie__dialog" role="dialog" aria-modal="true" aria-labelledby="spcp-cookie-title" aria-describedby="spcp-cookie-description" tabindex="-1">
+					<div class="spcp-cookie__dialog-head">
+						<h2 id="spcp-cookie-title">Preferenze cookie</h2>
+						<button type="button" class="spcp-cookie__close" data-spcp-cookie-close aria-label="Chiudi preferenze cookie">x</button>
 					</div>
-					<p id="lde-cookie-description">Puoi modificare il consenso in qualsiasi momento. I cookie necessari restano sempre attivi per sicurezza e funzionamento del sito.</p>
-					<div class="lde-cookie__choices">
+					<p id="spcp-cookie-description">Puoi modificare il consenso in qualsiasi momento. I cookie necessari restano sempre attivi per sicurezza e funzionamento del sito.</p>
+					<div class="spcp-cookie__choices">
 						<?php self::render_choice('necessary', 'Necessari', 'Sempre attivi. Servono per sicurezza, consenso, sessione e funzioni richieste.', true); ?>
 						<?php self::render_choice('preferences', 'Preferenze', 'Memorizzano scelte non essenziali, come impostazioni di visualizzazione o preferenze locali.', false); ?>
 						<?php self::render_choice('statistics', 'Statistiche', 'Aiutano a capire come viene usato il sito, solo dopo consenso.', false); ?>
 						<?php self::render_choice('marketing', 'Marketing', 'Permettono contenuti o misurazioni pubblicitarie e tracciamenti di terze parti, solo dopo consenso.', false); ?>
 					</div>
-					<p class="lde-cookie__policy-links">
+					<p class="spcp-cookie__policy-links">
 						<span>Documenti:</span>
 						<?php self::render_document_link($privacy_url, 'Privacy policy', 'privacy', $privacy_popup); ?>
 						<?php self::render_document_link($settings['cookie_policy_url'], 'Cookie policy', 'cookie-policy', $cookie_popup); ?>
 						<?php self::render_document_link($settings['accessibility_statement_url'], 'Accessibilita', 'accessibility', $accessibility_popup); ?>
 					</p>
-					<div class="lde-cookie__actions lde-cookie__actions--dialog">
-						<button type="button" class="lde-cookie__button lde-cookie__button--ghost" data-lde-cookie-reject>Rifiuta non essenziali</button>
-						<button type="button" class="lde-cookie__button lde-cookie__button--ghost" data-lde-cookie-save>Salva scelte</button>
-						<button type="button" class="lde-cookie__button" data-lde-cookie-accept>Accetta tutto</button>
+					<div class="spcp-cookie__actions spcp-cookie__actions--dialog">
+						<button type="button" class="spcp-cookie__button spcp-cookie__button--ghost" data-spcp-cookie-reject>Rifiuta non essenziali</button>
+						<button type="button" class="spcp-cookie__button spcp-cookie__button--ghost" data-spcp-cookie-save>Salva scelte</button>
+						<button type="button" class="spcp-cookie__button" data-spcp-cookie-accept>Accetta tutto</button>
 					</div>
 				</div>
 			</div>
 
 			<?php if ($privacy_popup) : ?>
-				<div class="lde-cookie__modal" data-lde-privacy-modal hidden>
-					<div class="lde-cookie__backdrop" data-lde-privacy-close></div>
-					<div class="lde-cookie__dialog lde-cookie__dialog--policy" role="dialog" aria-modal="true" aria-labelledby="lde-privacy-title" aria-describedby="lde-privacy-description" tabindex="-1">
-						<div class="lde-cookie__dialog-head">
-							<h2 id="lde-privacy-title">Privacy policy</h2>
-							<button type="button" class="lde-cookie__close" data-lde-privacy-close aria-label="Chiudi privacy policy">x</button>
+				<div class="spcp-cookie__modal" data-spcp-privacy-modal hidden>
+					<div class="spcp-cookie__backdrop" data-spcp-privacy-close></div>
+					<div class="spcp-cookie__dialog spcp-cookie__dialog--policy" role="dialog" aria-modal="true" aria-labelledby="spcp-privacy-title" aria-describedby="spcp-privacy-description" tabindex="-1">
+						<div class="spcp-cookie__dialog-head">
+							<h2 id="spcp-privacy-title">Privacy policy</h2>
+							<button type="button" class="spcp-cookie__close" data-spcp-privacy-close aria-label="Chiudi privacy policy">x</button>
 						</div>
-						<div id="lde-privacy-description" class="lde-cookie__policy-body" data-lde-privacy-body></div>
+						<div id="spcp-privacy-description" class="spcp-cookie__policy-body" data-spcp-privacy-body></div>
 					</div>
 				</div>
 			<?php endif; ?>
 
 			<?php if ($cookie_popup) : ?>
-				<div class="lde-cookie__modal" data-lde-cookie-policy-modal hidden>
-					<div class="lde-cookie__backdrop" data-lde-cookie-policy-close></div>
-					<div class="lde-cookie__dialog lde-cookie__dialog--policy" role="dialog" aria-modal="true" aria-labelledby="lde-cookie-policy-title" aria-describedby="lde-cookie-policy-description" tabindex="-1">
-						<div class="lde-cookie__dialog-head">
-							<h2 id="lde-cookie-policy-title">Cookie policy</h2>
-							<button type="button" class="lde-cookie__close" data-lde-cookie-policy-close aria-label="Chiudi cookie policy">x</button>
+				<div class="spcp-cookie__modal" data-spcp-cookie-policy-modal hidden>
+					<div class="spcp-cookie__backdrop" data-spcp-cookie-policy-close></div>
+					<div class="spcp-cookie__dialog spcp-cookie__dialog--policy" role="dialog" aria-modal="true" aria-labelledby="spcp-cookie-policy-title" aria-describedby="spcp-cookie-policy-description" tabindex="-1">
+						<div class="spcp-cookie__dialog-head">
+							<h2 id="spcp-cookie-policy-title">Cookie policy</h2>
+							<button type="button" class="spcp-cookie__close" data-spcp-cookie-policy-close aria-label="Chiudi cookie policy">x</button>
 						</div>
-						<div id="lde-cookie-policy-description" class="lde-cookie__policy-body" data-lde-cookie-policy-body></div>
+						<div id="spcp-cookie-policy-description" class="spcp-cookie__policy-body" data-spcp-cookie-policy-body></div>
 					</div>
 				</div>
 			<?php endif; ?>
 
 			<?php if ($accessibility_popup) : ?>
-				<div class="lde-cookie__modal" data-lde-accessibility-modal hidden>
-					<div class="lde-cookie__backdrop" data-lde-accessibility-close></div>
-					<div class="lde-cookie__dialog lde-cookie__dialog--policy" role="dialog" aria-modal="true" aria-labelledby="lde-accessibility-title" aria-describedby="lde-accessibility-description" tabindex="-1">
-						<div class="lde-cookie__dialog-head">
-							<h2 id="lde-accessibility-title">Dichiarazione di accessibilita</h2>
-							<button type="button" class="lde-cookie__close" data-lde-accessibility-close aria-label="Chiudi dichiarazione di accessibilita">x</button>
+				<div class="spcp-cookie__modal" data-spcp-accessibility-modal hidden>
+					<div class="spcp-cookie__backdrop" data-spcp-accessibility-close></div>
+					<div class="spcp-cookie__dialog spcp-cookie__dialog--policy" role="dialog" aria-modal="true" aria-labelledby="spcp-accessibility-title" aria-describedby="spcp-accessibility-description" tabindex="-1">
+						<div class="spcp-cookie__dialog-head">
+							<h2 id="spcp-accessibility-title">Dichiarazione di accessibilita</h2>
+							<button type="button" class="spcp-cookie__close" data-spcp-accessibility-close aria-label="Chiudi dichiarazione di accessibilita">x</button>
 						</div>
-						<div id="lde-accessibility-description" class="lde-cookie__policy-body" data-lde-accessibility-body></div>
+						<div id="spcp-accessibility-description" class="spcp-cookie__policy-body" data-spcp-accessibility-body></div>
 					</div>
 				</div>
 			<?php endif; ?>
 
 			<?php if ($privacy_popup) : ?>
-				<template data-lde-privacy-template>
+				<template data-spcp-privacy-template>
 					<?php echo self::privacy_policy_markup(false); ?>
 				</template>
 			<?php endif; ?>
 
 			<?php if ($cookie_popup) : ?>
-				<template data-lde-cookie-policy-template>
+				<template data-spcp-cookie-policy-template>
 					<?php echo self::cookie_policy_markup(false, false); ?>
 				</template>
 			<?php endif; ?>
 
 			<?php if ($accessibility_popup) : ?>
-				<template data-lde-accessibility-template>
+				<template data-spcp-accessibility-template>
 					<?php echo self::accessibility_statement_markup(false); ?>
 				</template>
 			<?php endif; ?>
@@ -1827,11 +1826,11 @@ final class Simple_Privacy_Cookie_Policy {
 		$attrs = '';
 		if ($open_popup) {
 			if ('privacy' === $document) {
-				$attrs = ' data-lde-privacy-open aria-haspopup="dialog"';
+				$attrs = ' data-spcp-privacy-open aria-haspopup="dialog"';
 			} elseif ('cookie-policy' === $document) {
-				$attrs = ' data-lde-cookie-policy-open aria-haspopup="dialog"';
+				$attrs = ' data-spcp-cookie-policy-open aria-haspopup="dialog"';
 			} elseif ('accessibility' === $document) {
-				$attrs = ' data-lde-accessibility-open aria-haspopup="dialog"';
+				$attrs = ' data-spcp-accessibility-open aria-haspopup="dialog"';
 			}
 		}
 
@@ -1841,12 +1840,12 @@ final class Simple_Privacy_Cookie_Policy {
 	private static function render_choice($key, $label, $description, $required) {
 		$checked = $required || self::consent_granted($key);
 		?>
-		<label class="lde-cookie__choice">
+		<label class="spcp-cookie__choice">
 			<span>
 				<strong><?php echo esc_html($label); ?></strong>
 				<small><?php echo esc_html($description); ?></small>
 			</span>
-			<input type="checkbox" data-lde-cookie-category="<?php echo esc_attr($key); ?>" <?php checked($checked); ?> <?php disabled($required); ?>>
+			<input type="checkbox" data-spcp-cookie-category="<?php echo esc_attr($key); ?>" <?php checked($checked); ?> <?php disabled($required); ?>>
 		</label>
 		<?php
 	}
@@ -1865,17 +1864,30 @@ final class Simple_Privacy_Cookie_Policy {
 			return $html;
 		}
 
-		$replacement = '<button type="button" class="lde-cookie-settings-link" data-lde-cookie-open data-cc-open-consent>Preferenze cookie</button>';
-		$html = preg_replace('#<a\b[^>]*href=["\']https?://www\.iubenda\.com/privacy-policy/[^"\']*/cookie-policy["\'][^>]*>.*?</a>#is', $replacement, $html);
-		$html = preg_replace('#<script\b[^>]*>\s*\(function\s*\(w,d\).*?cdn\.iubenda\.com/iubenda\.js.*?</script>#is', '', $html);
-		$html = preg_replace('#<script\b[^>]*>\s*var\s+_iub\s*=.*?_iub\.csConfiguration\s*=.*?</script>#is', '', $html);
-		$html = preg_replace('#<script\b[^>]+src=["\'](?:https?:)?//cdn\.iubenda\.com/[^"\']+["\'][^>]*>\s*</script>#is', '', $html);
+		$replacement = '<button type="button" class="spcp-cookie-settings-link" data-spcp-cookie-open data-cc-open-consent>Preferenze cookie</button>';
+		$patterns = array(
+			'#<a\b[^>]*href=["\']https?://www\.iubenda\.com/privacy-policy/[^"\']*/cookie-policy["\'][^>]*>.*?</a>#is' => $replacement,
+			'#<script\b[^>]*>\s*\(function\s*\(w,d\).*?cdn\.iubenda\.com/iubenda\.js.*?</script>#is' => '',
+			'#<script\b[^>]*>\s*var\s+_iub\s*=.*?_iub\.csConfiguration\s*=.*?</script>#is' => '',
+			'#<script\b[^>]+src=["\'](?:https?:)?//cdn\.iubenda\.com/[^"\']+["\'][^>]*>\s*</script>#is' => '',
+		);
+
+		foreach ($patterns as $pattern => $replace) {
+			$result = preg_replace($pattern, $replace, $html);
+			// On a PCRE backtrack/recursion limit (large pages), preg_replace returns null.
+			// Returning null from an output-buffer callback would blank the whole page, so
+			// keep the last good HTML and stop processing.
+			if (null === $result) {
+				return $html;
+			}
+			$html = $result;
+		}
 
 		return $html;
 	}
 
 	public static function settings_shortcode() {
-		return '<button type="button" class="lde-cookie-settings-link" data-lde-cookie-open data-cc-open-consent>Preferenze cookie</button>';
+		return '<button type="button" class="spcp-cookie-settings-link" data-spcp-cookie-open data-cc-open-consent>Preferenze cookie</button>';
 	}
 
 	public static function cookie_policy_shortcode() {
@@ -1969,7 +1981,7 @@ final class Simple_Privacy_Cookie_Policy {
 		$name = $settings['controller_legal_name'] ?: $settings['controller_name'];
 		ob_start();
 		?>
-		<section class="simple-policy simple-policy--accessibility lde-policy">
+		<section class="simple-policy simple-policy--accessibility spcp-policy">
 			<?php if ($include_title) : ?><h2>Dichiarazione di accessibilita</h2><?php endif; ?>
 			<p><?php echo esc_html($name); ?> si impegna a rendere questo sito accessibile e usabile secondo i requisiti tecnici applicabili ai servizi digitali.</p>
 			<p>Stato: parzialmente conforme in attesa di verifica manuale completa su contenuti redazionali, documenti caricati, contrasti, navigazione da tastiera e tecnologie assistive.</p>

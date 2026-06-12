@@ -307,6 +307,9 @@ final class SPCP_Legal_Generator {
 	}
 
 	public static function privacy_policy_markup($settings, $settings_link = '', $include_title = true) {
+		// Guarantee every key is present so the markup never emits PHP 8.1 "undefined key"
+		// warnings, regardless of how complete the caller's settings array is.
+		$settings = wp_parse_args(is_array($settings) ? $settings : array(), self::defaults());
 		if ('external' === ($settings['privacy_policy_mode'] ?? 'generated') && ! empty($settings['external_privacy_url'])) {
 			return self::external_privacy_markup($settings, $include_title);
 		}
@@ -363,7 +366,7 @@ final class SPCP_Legal_Generator {
 			<p><strong>Note aggiuntive:</strong> <?php echo esc_html($settings['custom_processing_notes']); ?></p>
 		<?php endif; ?>
 		<?php if ($settings_link) : ?><p>Gestione cookie: <?php echo $settings_link; ?></p><?php endif; ?>
-		<p class="lde-policy__updated">Ultimo aggiornamento: <?php echo esc_html(date_i18n('d/m/Y')); ?>.</p>
+		<p class="spcp-policy__updated">Ultimo aggiornamento: <?php echo esc_html(date_i18n('d/m/Y')); ?>.</p>
 		<?php
 		return ob_get_clean();
 	}
@@ -392,12 +395,14 @@ final class SPCP_Legal_Generator {
 			<p><strong>Additional notes:</strong> <?php echo esc_html($settings['custom_processing_notes']); ?></p>
 		<?php endif; ?>
 		<?php if ($settings_link) : ?><p>Cookie settings: <?php echo $settings_link; ?></p><?php endif; ?>
-		<p class="lde-policy__updated">Last update: <?php echo esc_html(date_i18n('d/m/Y')); ?>.</p>
+		<p class="spcp-policy__updated">Last update: <?php echo esc_html(date_i18n('d/m/Y')); ?>.</p>
 		<?php
 		return ob_get_clean();
 	}
 
 	public static function cookie_policy_markup($settings, $scan, $cookies, $services, $include_title, $include_settings_link, $settings_link) {
+		// Guarantee every key is present (see privacy_policy_markup) to avoid PHP 8.1 warnings.
+		$settings = wp_parse_args(is_array($settings) ? $settings : array(), self::defaults());
 		ob_start();
 		?>
 		<section class="simple-policy simple-policy--cookie">
@@ -535,12 +540,12 @@ final class SPCP_Legal_Generator {
 	private static function scan_note($scan, $lang) {
 		if (! empty($scan['scanned_at'])) {
 			$text = 'en' === $lang ? 'Last technical cookie scan: ' : 'Ultima scansione tecnica dei cookie: ';
-			echo '<p class="lde-policy__updated">'. esc_html($text . date_i18n('d/m/Y H:i', strtotime((string) $scan['scanned_at']))) .'.</p>';
+			echo '<p class="spcp-policy__updated">'. esc_html($text . date_i18n('d/m/Y H:i', strtotime((string) $scan['scanned_at']))) .'.</p>';
 			return;
 		}
 
 		$text = 'en' === $lang ? 'Technical scan not yet completed: the table shows the consent cookie installed by this website.' : 'Scansione tecnica non ancora eseguita: la tabella mostra il cookie tecnico di consenso installato da questo sito.';
-		echo '<p class="lde-policy__updated">'. esc_html($text) .'</p>';
+		echo '<p class="spcp-policy__updated">'. esc_html($text) .'</p>';
 	}
 
 	private static function cookie_tables($cookies, $services, $lang) {
@@ -590,8 +595,8 @@ final class SPCP_Legal_Generator {
 
 		ob_start();
 		?>
-		<div class="lde-policy-table-wrapper">
-			<table class="lde-policy-table">
+		<div class="spcp-policy-table-wrapper">
+			<table class="spcp-policy-table">
 				<caption><?php echo esc_html($caption); ?></caption>
 				<thead>
 					<tr>
